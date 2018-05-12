@@ -1,0 +1,1 @@
+random_guess_fitness: -1.05967304264
