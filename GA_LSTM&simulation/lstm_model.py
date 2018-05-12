@@ -1,6 +1,14 @@
 from keras.layers import Input, Dense, LSTM, merge,LeakyReLU, GRU, SimpleRNN, Dropout
 from keras.models import Sequential, load_model
 from keras.utils import plot_model
+from keras.backend.tensorflow_backend import set_session
+import tensorflow as tf
+import os
+
+os.environ["CUDA_VISIBLE_DEVICES"]="0,2"
+config = tf.ConfigProto()
+config.gpu_options.per_process_gpu_memory_fraction = 0.48
+set_session(tf.Session(config=config))
 
 # Build the model
 def generate_model(seq_len, layer_type,layer_num,rnn_unit,dense_unit):
