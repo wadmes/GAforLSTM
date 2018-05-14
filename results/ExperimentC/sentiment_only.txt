@@ -1,0 +1,1 @@
+sentiment_only_fitness: -4938.24766041

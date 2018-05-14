@@ -1,17 +1,9 @@
-# from keras.backend.tensorflow_backend import set_session
 import pandas as pd
-# import tensorflow as tf
 import numpy as np
-import lstm_model
+import rnn_model
 import simulation
 import random
 import csv
-# import os
-
-# os.environ["CUDA_VISIBLE_DEVICES"]="0,2"
-# config = tf.ConfigProto()
-# config.gpu_options.per_process_gpu_memory_fraction = 0.48
-# set_session(tf.Session(config=config))
 
 class conf:
     # Data
@@ -33,12 +25,12 @@ class conf:
     rnn_unit = np.array([16,32,64,128])
     dense_unit = np.array([32,64,128])
     batch = 128 # batch size
-    epochs = 50 # num of epochs to train
+    epochs = 100 # num of epochs to train
     scale ='minmax' # way of scale training data, either minmax or standard
     # GP
     gene_num = 9
     generation_num = 15
-    population_size = 50
+    population_size = 50 # No less than 2
     pc = 0.8 # Probability for crossover
     pr = 0.1 # Probability for reproduction
     pm = 0.1 # Probability for mutation
@@ -62,9 +54,7 @@ def processData(data,label,lb):
     return np.array(X), np.array(Y)
 
 def fitness_measure(simulate_list, real_list):
-    return_simulate = (simulate_list[-1] - simulate_list[0])/simulate_list[0]
-    return_real = (real_list[-1] - real_list[0])/real_list[0]
-    return return_simulate - return_real
+    return simulate_list[-1] - real_list[-1]
 
 def softmax(x):
     return np.exp(x) / np.sum(np.exp(x))
@@ -78,7 +68,7 @@ def select(fitness, num):
         accumulate_prob = 0
         rand = random.uniform(0,1)
         for i in range(prob.shape[0]):
-            if rand >= accumulate_prob and rand < accumulate_prob + prob[i]:
+            if rand >= accumulate_prob and rand <= accumulate_prob + prob[i]:
                 return_list.append(remain_list.pop(i))
                 f.pop(i)
                 break
@@ -151,7 +141,7 @@ def GP(gene_num=conf.gene_num, generation_num=conf.generation_num,
             print 'Generation {} - individual {}'.format(g+1,count)
             test_x,test_y = processData(np.array(test[conf.fields]),np.array(test['next_change']),individual[4])
             train_x,train_y = processData(np.array(train[conf.fields]),np.array(train['next_change']),individual[4])
-            model = lstm_model.generate_model(individual[4],individual[5],individual[6],individual[7],individual[8])
+            model = rnn_model.generate_model(individual[4],individual[5],individual[6],individual[7],individual[8])
             model.fit(train_x,train_y,epochs=conf.epochs,batch_size=conf.batch,shuffle=False,validation_split=0.1)
             predictions = model.predict(test_x)
             capital_simulate, capital_stock = simulation.simulation_algorithm(
@@ -189,16 +179,19 @@ def GP(gene_num=conf.gene_num, generation_num=conf.generation_num,
     # Select the best individual
     print 'Select the best individual...'
     fitness = []
+    count = 1
     for individual in population:
+        print 'Selection - individual {}'.format(count)
         test_x,test_y = processData(np.array(test[conf.fields]),np.array(test['next_change']),individual[4])
         train_x,train_y = processData(np.array(train[conf.fields]),np.array(train['next_change']),individual[4])
-        model = lstm_model.generate_model(individual[4],individual[5],individual[6],individual[7],individual[8])
+        model = rnn_model.generate_model(individual[4],individual[5],individual[6],individual[7],individual[8])
         model.fit(train_x,train_y,epochs=conf.epochs,batch_size=conf.batch,shuffle=False,validation_split=0.1)
         predictions = model.predict(test_x)
         capital_simulate, capital_stock = simulation.simulation_algorithm(
             sentiment, predictions, list(test['adj_close']), individual[0], individual[1],
             individual[2], individual[3])
         fitness.append(fitness_measure(capital_simulate, capital_stock))
+        count += 1
     best_individual = population[fitness.index(max(fitness))]
     print 'The best individual: {}'.format(best_individual)
 
@@ -212,10 +205,10 @@ def GP(gene_num=conf.gene_num, generation_num=conf.generation_num,
     print 'Evaluate the best individual...'
     test_x,test_y = processData(np.array(test[conf.fields]),np.array(test['next_change']),best_individual[4])
     train_x,train_y = processData(np.array(train[conf.fields]),np.array(train['next_change']),best_individual[4])
-    model = lstm_model.generate_model(best_individual[4],best_individual[5],best_individual[6],best_individual[7],best_individual[8])
+    model = rnn_model.generate_model(best_individual[4],best_individual[5],best_individual[6],best_individual[7],best_individual[8])
     model.fit(train_x,train_y,epochs=conf.epochs,batch_size=conf.batch,shuffle=False,validation_split=0.1)
     predictions = model.predict(test_x)
-    model.save('../results/best_lstm_model')
+    model.save('../results/best_rnn_model')
     capital_simulate, capital_stock = simulation.simulation_algorithm(
         sentiment, predictions, list(test['adj_close']), best_individual[0], best_individual[1],
         best_individual[2], best_individual[3])
@@ -232,7 +225,7 @@ def GP(gene_num=conf.gene_num, generation_num=conf.generation_num,
         avg_individual[i] = conf.gene_base[i][conf.gene_base[i].shape[0]/2]
     test_x,test_y = processData(np.array(test[conf.fields]),np.array(test['next_change']),avg_individual[4])
     train_x,train_y = processData(np.array(train[conf.fields]),np.array(train['next_change']),avg_individual[4])
-    model = lstm_model.generate_model(avg_individual[4],avg_individual[5],avg_individual[6],avg_individual[7],avg_individual[8])
+    model = rnn_model.generate_model(avg_individual[4],avg_individual[5],avg_individual[6],avg_individual[7],avg_individual[8])
     model.fit(train_x,train_y,epochs=conf.epochs,batch_size=conf.batch,shuffle=False,validation_split=0.1)
     predictions = model.predict(test_x)
     capital_simulate, capital_stock = simulation.simulation_algorithm(
@@ -262,20 +255,20 @@ def GP(gene_num=conf.gene_num, generation_num=conf.generation_num,
         file.write('sentiment_only_fitness: {}'.format(sentiment_only_fitness))
     print 'Write simulation process into csv file...'
     write_to_csv(list(test_date)[1:], capital_simulate, capital_stock, '../results/sentiment_only.csv')
-    # LSTM only
-    print 'Evaluate LSTM only...'
+    # RNN only
+    print 'Evaluate RNN only...'
     test_x,test_y = processData(np.array(test[conf.fields]),np.array(test['next_change']),10)
     train_x,train_y = processData(np.array(train[conf.fields]),np.array(train['next_change']),10)
-    model = lstm_model.generate_model(10,'LSTM',2, 128, 32)
+    model = rnn_model.generate_model(10,'LSTM',2, 128, 32)
     model.fit(train_x,train_y,epochs=conf.epochs,batch_size=conf.batch,shuffle=False,validation_split=0.1)
     predictions = model.predict(test_x)
     capital_simulate, capital_stock = simulation.lstm_only(predictions,list(test['adj_close']))
     lstm_only_fitness = fitness_measure(capital_simulate, capital_stock)
     print 'lstm_only_fitness: {}'.format(lstm_only_fitness)
-    with open('../results/lstm_only.txt','w') as file:
+    with open('../results/rnn_only.txt','w') as file:
         file.write('lstm_only_fitness: {}'.format(lstm_only_fitness))
     print 'Write simulation process into csv file...'
-    write_to_csv(list(test_date)[10:], capital_simulate, capital_stock, '../results/lstm_only.csv')
+    write_to_csv(list(test_date)[10:], capital_simulate, capital_stock, '../results/rnn_only.csv')
 
 if __name__ == '__main__':
     GP()

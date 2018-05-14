@@ -1,0 +1,1 @@
+lstm_only_fitness: -8160.30460909

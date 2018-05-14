@@ -5,7 +5,7 @@ import pandas as pd
 import random
 
 def one_day_simulation(prediction, upper_threshold, lower_threshold, stock_price, share_num, money, sentiment_weight, adjust_ratio):
-    if prediction>=upper_threshold:
+    if prediction>upper_threshold:
         if sentiment_weight > 0:
             buy_ratio = min((prediction - upper_threshold + adjust_ratio), 1.0)
             buy_ratio = max(buy_ratio, 0)
@@ -17,7 +17,7 @@ def one_day_simulation(prediction, upper_threshold, lower_threshold, stock_price
             buy_ratio = max(buy_ratio, 0)
         share_num += int(money * buy_ratio / stock_price)
         money -= int(money * buy_ratio / stock_price) * stock_price
-    elif prediction<=lower_threshold:
+    elif prediction<lower_threshold:
         if sentiment_weight > 0:
             sell_ratio = min((prediction - upper_threshold - adjust_ratio), 1.0)
             sell_ratio = max(sell_ratio, 0)
@@ -68,11 +68,11 @@ def random_guess(real):
     for i in range(1,len(real)):
         rand = random.uniform(0,1)
         if rand < 0.333:
-            buy_ratio = random.uniform(0,1)
+            buy_ratio = random.uniform(0.4,0.6)
             share_num += int(money * buy_ratio / stock_price)
             money -= int(money * buy_ratio / stock_price) * stock_price
         elif rand >= 0.333 and rand < 0.666:
-            sell_ratio = random.uniform(0,1)
+            sell_ratio = random.uniform(0.4,0.6)
             share_num -= int(share_num * sell_ratio)
             money += int(share_num * sell_ratio) * stock_price
         stock_price = real[i]
@@ -93,11 +93,11 @@ def sentiment_only(sentiment, real):
         if ix == len(real):
             break
         if data['Total']>news_number and data['Average']>mean_sentiment:
-            buy_ratio = random.uniform(0,1)
+            buy_ratio = random.uniform(0.4,0.6)
             share_num += int(money * buy_ratio / stock_price)
             money -= int(money * buy_ratio / stock_price) * stock_price
         elif data['Total']>news_number and data['Average']<mean_sentiment:
-            sell_ratio = random.uniform(0,1)
+            sell_ratio = random.uniform(0.4,0.6)
             share_num -= int(share_num * sell_ratio)
             money += int(share_num * sell_ratio) * stock_price
         stock_price = real[ix]
@@ -115,11 +115,11 @@ def lstm_only(lstm_prediction, real):
     stock_price=real[gap-1]
     for i in range(lstm_prediction.shape[0]):
         if lstm_prediction[i] > 0:
-            buy_ratio = random.uniform(0,1)
+            buy_ratio = random.uniform(0.4,0.6)
             share_num += int(money * buy_ratio / stock_price)
             money -= int(money * buy_ratio / stock_price) * stock_price
         elif lstm_prediction[i] < 0:
-            sell_ratio = random.uniform(0,1)
+            sell_ratio = random.uniform(0.4,0.6)
             share_num -= int(share_num * sell_ratio)
             money += int(share_num * sell_ratio) * stock_price
         stock_price = real[gap+i]

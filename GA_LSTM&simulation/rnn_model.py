@@ -50,6 +50,5 @@ def generate_model(seq_len, layer_type,layer_num,rnn_unit,dense_unit):
             else:
                 dense_units = max((dense_unit / pow(2,i)), 32)
             model.add(Dense(units=dense_units))
-    # model.add(Dense(units=1))
     model.compile(optimizer='adam',loss='mse')
     return model
